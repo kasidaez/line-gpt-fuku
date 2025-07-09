@@ -1,14 +1,15 @@
 {
-  "name": "line-gpt-bot",
+  "name": "line-gpt-fuku",
   "version": "1.0.0",
+  "description": "Line bot with OpenAI API",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-  "dotenv": "^16.0.3",
-  "express": "^4.18.2",
-  "@line/bot-sdk": "^7.5.0",
-  "openai": "^4.26.0"
+    "@line/bot-sdk": "^7.5.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "openai": "^4.26.0"
+  }
 }
-
