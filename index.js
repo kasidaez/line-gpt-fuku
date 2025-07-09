@@ -13,7 +13,7 @@ const config = {
 };
 
 // OpenAI Config
-const configuration = new Configuration({
+const { Configuration, OpenAIApi } = require("openai");
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
