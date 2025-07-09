@@ -1,80 +1,68 @@
-// index.js
 require("dotenv").config();
 const express = require("express");
-const { Client } = require("@line/bot-sdk");
 const { Configuration, OpenAIApi } = require("openai");
+const line = require("@line/bot-sdk");
 
 const app = express();
-app.use(express.json());
+const port = process.env.PORT || 3000;
 
-const lineConfig = {
+// LINE Config
+const config = {
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.LINE_CHANNEL_SECRET,
 };
 
-const client = new Client(lineConfig);
+// OpenAI Config
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
 
-// GPT setup
-const openai = new OpenAIApi(
-  new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
-  })
-);
-
-async function askGPT(message) {
-  const res = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo",
-    messages: [
-      {
-        role: "system",
-        content: "คุณคือแอดมินเว็บพนัน ใช้ภาษาสุภาพ อธิบายเข้าใจง่าย ตอบเร็ว พูดเก่ง ชวนลูกค้าฝากเงินอย่างเนียน ๆ",
-      },
-      {
-        role: "user",
-        content: message,
-      },
-    ],
-    temperature: 0.7,
-  });
-  return res.data.choices[0].message.content;
-}
-
-app.post("/webhook", async (req, res) => {
+// LINE Webhook Handler
+app.post("/webhook", line.middleware(config), async (req, res) => {
   const events = req.body.events;
-  if (!events || events.length === 0) {
-    return res.status(200).send("OK");
-  }
 
   const results = await Promise.all(
     events.map(async (event) => {
       if (event.type === "message" && event.message.type === "text") {
         const userText = event.message.text;
 
-        // คุณสามารถใส่ keyword ที่คุณอยากให้ตอบเองแบบ manual ก่อนก็ได้
-        if (userText.includes("โปร") || userText.includes("แนะนำเกม")) {
+        // ตัวอย่างการใช้ keyword (คุณสามารถปรับให้ฉลาดขึ้น)
+        if (userText.toLowerCase().includes("โปร")) {
           return client.replyMessage(event.replyToken, {
             type: "text",
-            text: "🔥 โปรใหม่ล่าสุด ฝาก 300 รับ 450 เทิร์นต่ำ ถอนง่าย! ลองเลย!",
+            text: "💥 โปรดี ๆ ต้องรีบเลย! ไม่มีขั้นต่ำ ไม่ต้องทำเทิร์น!",
           });
         }
 
-        const gptReply = await askGPT(userText);
-        return client.replyMessage(event.replyToken, {
-          type: "text",
-          text: gptReply,
-        });
+        // ถ้าไม่เจอ keyword ส่งไปหา GPT
+        try {
+          const response = await openai.createChatCompletion({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: userText }],
+          });
+
+          const reply = response.data.choices[0].message.content;
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: reply,
+          });
+        } catch (error) {
+          console.error("GPT Error:", error.message);
+          return client.replyMessage(event.replyToken, {
+            type: "text",
+            text: "ขอโทษค่ะ ระบบตอบกลับมีปัญหาชั่วคราว 😢",
+          });
+        }
       }
     })
   );
-app.get("/", (req, res) => {
-  res.send("GPT LINE Bot is running!");
-});
-
 
   res.status(200).send("OK");
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port {PORT}`);
+// Start server
+const client = new line.Client(config);
+app.listen(port, () => {
+  console.log(`LINE GPT Bot is running on port ${port}`);
 });
