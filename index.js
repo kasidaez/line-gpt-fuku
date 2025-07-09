@@ -66,6 +66,10 @@ app.post("/webhook", async (req, res) => {
       }
     })
   );
+app.get("/", (req, res) => {
+  res.send("GPT LINE Bot is running!");
+});
+
 
   res.status(200).send("OK");
 });
